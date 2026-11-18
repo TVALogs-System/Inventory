@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="vi"><head>
 <script>
 /* ⚙ CẤU HÌNH: dán URL Web App của Google Apps Script (kết thúc bằng /exec) vào đây.
@@ -1149,7 +1149,7 @@ const vchNo=o=>{const n=nccOf(grpOf(o))||{};return(n.vpre||'')+String(o.orderNo|
 const PDF_SAVE={mode:'download'};
 const pdfName=(pre,no)=>pre+'_'+(String(no||'').trim().replace(/[\\\/:*?"<>|\r\n\t]+/g,'-').replace(/\s+/g,' ').slice(0,80)||'khong-so')+'.pdf';
 async function vchStore(blob,name){
- if(window.CLOUD&&CLOUD.on)CLOUD.savePhieu(blob,name);
+ if(window.CLOUD&&CLOUD.on&&CLOUD.ready){const ok=await CLOUD.savePhieu(blob,name);if(ok)return;toast('Chưa lưu được phiếu lên Drive — đã tải về máy để bạn giữ bản này')}
  /* TODO Drive: if(PDF_SAVE.mode==='drive'){ gửi blob lên Apps Script / Drive API rồi return } */
  const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();
  setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},15000)}
@@ -2713,7 +2713,7 @@ async function saveSheets(specs,fname,drv,noDl){if(typeof ExcelJS==='undefined')
   sp.cells.forEach(({r,c,v,s})=>{const x=ws.getCell(r,c);x.value=v&&v.f?{formula:v.f,result:v.r}:v;Object.assign(x,s)});
   sp.merges.forEach(m=>ws.mergeCells(m[0],m[1],m[2],m[3]));
   if(sp.logo){if(logo===null)logo=wb.addImage({base64:compLogo(),extension:/^data:image\/jpe?g/.test(compLogo())?'jpeg':'png'});ws.addImage(logo,{tl:{col:0.1,row:0.1},ext:sp.logo})}});
- const blob=new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});if(drv&&window.CLOUD&&CLOUD.on)CLOUD.driveSave(drv.kind,drv.cust,drv.period,blob,fname,blob.type);if(!noDl){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}return true}
+ const blob=new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});let onDrive=false;if(drv&&window.CLOUD&&CLOUD.on&&CLOUD.ready){onDrive=await CLOUD.driveSave(drv.kind,drv.cust,drv.period,blob,fname,blob.type);if(!onDrive&&!noDl)toast('Chưa lưu được lên Drive — đã tải về máy để bạn giữ bản này')}if(!noDl&&!onDrive){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}return true}
 
  
 function buildBillingSheets(c){const X=xlOf(billOf(c));XFN=X.font||null;HDR=xcol(X.hdr,HDR0);GRN=xcol(X.tot,GRN0);YEL=xcol(X.sub,YEL0);RED=xcol(X.top,RED0);try{return buildBillingSheets0(c)}finally{XFN=null;HDR=HDR0;GRN=GRN0;YEL=YEL0;RED=RED0}}
@@ -3213,11 +3213,11 @@ async function tryUpload(it) {
   try { const j = await C.call('upload', { kind: it.kind, cust: it.cust, period: it.period, name: it.name, mime: it.mime || it.blob.type, b64: await b64(it.blob), _t: 180000 }); C.uploads = C.uploads.filter(x => x !== it); setStatus(); tst('Đã lưu «' + it.name + '» vào Google Drive'); return j }
   catch (e) { it.err = e.message; if (!C.uploads.includes(it)) C.uploads.push(it); setStatus(); tst('⚠ Không lưu được «' + it.name + '» lên Drive: ' + e.message); throw e }
 }
-C.driveSave = (kind, cust, period, blob, name, mime) => { if (!C.on || !C.ready) return Promise.resolve(); return tryUpload({ kind, cust, period, blob, name, mime }).catch(() => { }) };
+C.driveSave = (kind, cust, period, blob, name, mime) => { if (!C.on || !C.ready) return Promise.resolve(false); return tryUpload({ kind, cust, period, blob, name, mime }).then(() => true, () => false) };
 async function retryUploads() { for (const it of [...C.uploads]) { try { await tryUpload(it) } catch (e) { } } }
 const safeName = s => String(s || '').trim().replace(/[\\\/:*?"<>|\r\n\t]+/g, '-').replace(/\s+/g, ' ').slice(0, 80) || 'khong-so';
 C.saveLenh = (kind, o, file) => { if (!C.on || !file || !o) return; const ext = (/\.[A-Za-z0-9]{1,5}$/.exec(file.name) || ['.bin'])[0].toLowerCase(); C.driveSave('LENH', '', null, file, (kind === 'nhap' ? 'LN_' : 'LX_') + safeName(o.orderNo) + ext, file.type) };
-C.savePhieu = (blob, name) => { const cx = (window.__vchCtx || {})[name]; if (cx) C.driveSave(cx.kind, cx.cust, null, blob, name, 'application/pdf') };
+C.savePhieu = (blob, name) => { const cx = (window.__vchCtx || {})[name]; if (!cx) return Promise.resolve(false); return C.driveSave(cx.kind, cx.cust, null, blob, name, 'application/pdf') };
 C.periodName = (f, t) => { const P = s => { if (s instanceof Date) return new Date(s.getFullYear(), s.getMonth(), s.getDate()); const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ''); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null }, a = P(f), b = P(t); if (!a || !b || isNaN(a) || isNaN(b)) return 'khong-ro-ky'; const F = d => pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear(); if (a.getDate() === 1 && b.getTime() === new Date(a.getFullYear(), a.getMonth() + 1, 0).getTime()) return a.getFullYear() + '-' + pad(a.getMonth() + 1); return F(a) + '-' + F(b) };
 C.openFolder = async (kind, cust, period) => { const w = window.open('about:blank', '_blank'); try { const j = await C.call('folder', { kind, cust: cust || '', period: period || '', _t: 45000 }); if (w) w.location.href = j.url; else tst(j.url) } catch (e) { if (w) w.close(); tst('Không mở được thư mục Drive: ' + e.message) } };
 
