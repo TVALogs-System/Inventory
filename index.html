@@ -8,10 +8,13 @@ document.addEventListener('DOMContentLoaded',function(){set(d.getAttribute('data
    ID Google Sheet và ID thư mục Drive điền trong file Code.gs (mục CONFIG). */
 const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbwmNgVbHFbhmI2Sact8VXnld1eQlO2hSzLHbO8rZD51IgDOD12mKOW5BgLHnkeqCfc/exec';
 </script><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0B3C6F"><title>TVA | Quản lý kho</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>/* 404 / lỗi tải tài nguyên: ghi rõ URL và tự thử CDN dự phòng cho thư viện */
+(function(){var FB={'cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js':'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js':'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js':'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'};
+window.__resFail=[];window.addEventListener('error',function(e){var t=e.target;if(!t||t===window||!(t.src||t.href))return;var u=t.src||t.href;if(/^data:/.test(u))return;window.__resFail.push(u);try{console.warn('[TVA] Không tải được tài nguyên (404/mạng):',u)}catch(x){}
+ if(t.tagName==='SCRIPT'&&!t.dataset.fb){for(var k in FB){if(u.indexOf(k)>=0){var n=document.createElement('script');n.dataset.fb='1';n.src=FB[k];n.async=false;document.head.appendChild(n);console.warn('[TVA] Thử CDN dự phòng:',FB[k]);break}}}},true)})();</script><script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<link rel="icon" id="favicon"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" id="favicon" href="data:,"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--blue:#1769d2;--blue-pale:#edf5ff;--ink:#193451;--muted:#71839a;--line:#e5edf5;--bg:#f7faff;--green:#0b9f78;--orange:#f28a45;--purple:#6c55e8;--red:#df5454;--shadow:0 4px 18px rgba(28,65,110,.055)}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Arial,sans-serif;font-size:14px}button,input{font:inherit}button{cursor:pointer}
 .sidebar{width:232px;position:fixed;inset:0 auto 0 0;background:#fff;border-right:1px solid var(--line);padding:18px 12px 14px;display:flex;flex-direction:column;z-index:10;overflow:auto}
@@ -3301,7 +3304,7 @@ C.call0 = async function (action, p) {
   const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), to);
   try {
     const r = await fetch(C.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action, token: C.token, sid: C.sid }, body)), signal: ctl.signal });
-    if (!r.ok) { const e = new Error('Máy chủ trả lỗi HTTP ' + r.status); e.net = true; throw e }
+    if (!r.ok) { const HM = { 404: 'Không tìm thấy Web App (lỗi 404): URL Apps Script sai hoặc bản triển khai đã bị xóa. Vào Apps Script → Deploy → Manage deployments, sao chép lại URL kết thúc bằng /exec rồi dán vào CLOUD_URL', 401: 'Máy chủ từ chối truy cập (401) — đặt quyền Web App là “Bất kỳ ai”', 403: 'Không có quyền truy cập Web App (403) — đặt quyền “Bất kỳ ai” và triển khai lại', 429: 'Máy chủ đang quá tải (429), thử lại sau ít phút' }; const e = new Error(HM[r.status] || (r.status >= 500 ? 'Máy chủ gặp sự cố (HTTP ' + r.status + '), thử lại sau' : 'Máy chủ trả lỗi HTTP ' + r.status)); e.net = true; e.http = r.status; throw e }
     let j; try { j = await r.json() } catch (x) { const e = new Error('Máy chủ trả dữ liệu không hợp lệ — kiểm tra URL Web App và quyền truy cập “Bất kỳ ai”'); e.net = true; throw e }
     if (!j.ok) { const e = new Error(j.err || 'Lỗi máy chủ'); e.code = j.code || ''; throw e }
     return j;
